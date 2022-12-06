@@ -1,0 +1,182 @@
+---
+title: "The effect of vitamin C on tooth Growth in Guinea Pigs"
+author: "Elisa Schmid"
+date: "11/14/2022"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+bibliography: citations.bib
+nocite: '@*'
+---
+![source : https://www.pinterest.ch/pin/385198574382631643/](guinea_pig.jpg)   
+
+    
+### Information about the data  
+
+We took a data frame containing 60 observations on 3 variables  :   
+
+* [,1]	**len** :	numeric	Tooth length in microns
+* [,2]	**supp** :	factor Supplement type (VC or OJ)
+* [,3]	**dose** :	numeric Dose in milligrams/day 
+
+These data are taken from an article about the effect of vitamin C on tooth growth in Guinea Pigs [@crampton_growth_1947]. The data were imported into R from the "datasets package".  
+    
+    
+### Research question   
+    
+The researchers selected 60 guinea pigs and each animal received one of three dose levels of vitamin C (0.5, 1 or 2 mg/day) by one of the two delivery methods; orange juice (OJ) or ascorbic acid (VC). They then measured the response to the different supplement types and doses by measuring the lenght of odontoblasts that are the cells responsible for tooth growth.  
+  
+We would therefore like to analyze these data to **determine if tooth length is influenced by the supplement, and if the effect of the supplement varies with the given dose.**    
+
+Our assumptions are as follows:  
+
+ **A) H0-supplement :** individuals from different supplement have similar tooth lengths 
+
+ **B) H0-dose :** the different doses do not affect the length of the teeth (individuals from different dose have similar tooth lengths)  
+ 
+ **C) H0-supplement-dose :** the effect of the supplement on tooth length is the same regardless of the dose given     
+
+### Data definition 
+The tooth length is a quantitative response variable. the supplement and the dose are qualitative variables.    
+
+*Nb: we will consider the variable "dose" as a qualitative variable in the sense that there are three different doses:*  
+
+ * *0.5 : which can be considered as a "low dose "* 
+ * *1 : which can be considered as an "average dose*
+ * *2 : which can be considered as a "high dose "* 
+
+We will represent the variation of the length of the teeth according to the treatment and the dose with boxplots :  
+ 
+```{r}
+data <- ToothGrowth
+len <- data$len
+dose <- as.factor(data$dose) 
+supp <- as.factor(data$supp)
+
+par(mfrow=c(1,2))
+boxplot(len ~ supp, xlab = "Supplement", ylab ="Odontoblasts length [microns]",  
+main = "Odontoblasts (tooth) length as a  
+        function of the supplement")
+boxplot(len ~ dose, xlab = "Dose [milligrams/day]", ylab = "Odontoblasts length [microns]",   
+main = "Odontoblasts (tooth) length as a  
+        function of the dose")
+```
+    
+We can see that there seems to be a difference between the different supplements (OJ and VC) with more tooth growth with the OJ supplement than with the VC supplement. There also seems to be a difference in tooth growth depending on the dose. Indeed, the higher the dose, the greater the growth of the teeth seems to be.    
+
+We can also make boxplots with all possible combinations of supplements and doses :  
+
+```{r}
+par(mfrow = c(1,1))
+par(las=2)
+par(mar=c(6.1, 4.1, 0.6,0.6))
+boxplot(len ~ dose*supp, xlab = "",ylab = "Odontoblasts length [microns]",  
+        main = "Odontoblasts (tooth) length as a function of the dose of supplement")  
+
+        
+```  
+
+    
+    
+We can see that there is much less variability for the 2.0 mg dose in OJ and for the 1.0 mg dose in VC than for other doses in both supplements. Indeed, we see that the 1st and 3rd quartile of the boxplots are reduced compared to the other boxplots. We also see that there are some asymmetries in the data (i.e. 0.5 mg of VC) as well as an outlier for a dose of 1 mg of VC.
+ 
+
+### Choice of the test 
+
+the supplement is a fixed factor because we want to determine if the tooth growth varies between the two types of supplements (OJ and VC). We will use a **two-factor crossed ANOVA** because the effect of the variable "supplement" interacts with the effect of the variable "dose".    
+The conditions of the two-factor ANOVA are the normality of the residuals and the homogeneity of the variances in all the groups (here 2 supplements x 3 doses = 6 groups). To examine the normality of the residuals, we will construct the cross-over model and then examine the distribution of the residuals using a quantile-quantile plot.   
+
+In order to examine the normality of the residuals we will build a cross model, then we will use the functions qqnorm and qqpline.  
+```{r}
+m = aov(len ~ dose*supp)
+qqnorm(residuals(m))
+qqline(residuals(m))
+```
+  
+  
+It can be observed that the points are located on the straight line, with a few exceptions in the extreme values. The quantile-quantile graph thus shows no significant deviation from normality in the residuals of the model.  
+
+For the homogeneity of the variances between the six groups, we will create a new vector that identifies these six groups, and then we will use the Barlett test. But first, let's define our groups better with the "summary" command for our two types of supplements.  
+
+**Summary for the orange juice supplement :**  
+```{r}
+summary(subset(data,supp=="OJ"))
+```
+the lengths of odontoblasts through the 30 pigs ranged from 8.20 micron to 30.90 microns with median of 22.7 microns and a mean of 20.66 microns.  
+
+
+**Summary for the ascorbic acid supplement :**  
+```{r}
+summary(subset(data,supp=="VC"))
+```
+the lengths of odontoblasts through the 30 pigs ranged from 4.20 micron to 33.90 microns with median of 16.50 microns and a mean of 16.96 microns.  
+
+In general, we can see that for each type of supplement (OJ and VC) data from 30 pigs were collected. These **30 pigs were separated into 3 groups of 10** and each group received a different supplement dose:  
+
+ * 10 pigs received : 0.5 mg dose by orange juice  
+ * 10 pigs received : 1.0 mg dose by orange juice
+ * 10 pigs received : 2.0 mg dose by orange juice
+ * 10 pigs received : 0.5 mg dose by ascorbic acid
+ * 10 pigs received : 1.0 mg dose by ascorbic acid
+ * 10 pigs received : 2.0 mg dose by ascorbic acid
+
+
+So we have 6 groups of 10 pigs each:  
+```{r}
+group <- factor(rep(1:6, each = 10))
+bartlett.test(len ~ group)
+```
+The graphs above, as well as Bartlett's test, do not show a non-homogeneous distribution of variances between the groups (p-value = 0.227). **The conditions of application of the test are thus respected** and we can continue our analysis by setting up our ANOVA.
+
+### Setting up the test 
+```{r}
+anova(m)
+```
+We see that the dose, the supplement and the interraction of the two have a significant effect on tooth growth (pr_dose = < 2.2e-16, pr_supp = 0.000231, pr_dose:supp = 0.0219). We note that the effect of dose and supplement on tooth growth taken separately is very significant, while the effect of their interraction is much less significant.   
+
+Let's now take a closer look at these effects with a Tukey test:
+ 
+```{r}
+TukeyHSD(aov(len~ dose*supp))
+```
+
+### Analysis of the results
+
+In the last table, there are three interesting comparisons:  
+
+**1. Stem cell length is compared for each combination of the 3 dose levels (0.5, 1 and 2) for the supplement given as orange juice (OJ)**.   
+
+* line 1: **1.0** OJ vs **0.5** OJ: diff: 9.47 **p-value = 0.0000046**
+* line 2: **2.0** OJ vs **0.5** OJ: diff: 12.83 **p-value = 0.0000000**
+* line 6: **2.0** OJ vs **1.0** OJ: diff: 3.36 **p-value = 0.3187361**
+
+for OJ, there is a significant difference in the length of the stem cells between dose 1 and 0.5 (p-value = 0.0000046) as well as between dose 2 and 0.5 (p-value = 0.0000000). Indeed, we see that the length of the odontoblasts is + 9.47 microns for a dose of 1 compared to a dose of 0.5 and + 12.83 microns for a dose of 2 compared to a dose of 0.5. However, there was no significant difference in stem cell length between dose 2 and dose 1 (p-value = 0.3187361). This means that for the orange juice supplement (OJ), a dose of 1 or 2 milligrams per day will have more effect on stem cell length compared to a dose of 0.5. However, the difference between a dose of 1 and 2 milligrams will not have a significant difference on stem cell length, which means that a dose of 2 milligrams per day will not have a significantly greater effect on odontoblast length than a dose of 1 milligram per day.  
+
+
+**2. Stem cell length is compared for each combination of the 3 dose levels (0.5, 1 and 2) for the supplement given as ascorbic acid (VC)**.      
+
+* line 13: **1.0 **VC vs **0.5** VC: diff: 8.79 **p-value = 0.0000210**
+* line 14: **2.0 **VC vs **0.5** VC: diff: 18.16 **p-value = 0.0000000**
+* line 15: **2.0 **VC vs **1.0** VC: diff: 9.37 **p-value = 0.0000058**
+
+We see that the p-values for the 3 combinations (1 vs 0.5, 2 vs 0.5 and 2 vs 1) are significant (p-value = 0.0000210, 0.0000000 and 0.0000058 respectively) - meaning that we can reject the null hypothesis that there is no difference between the mean lengths of each pair of these doses. In other words, for vitamin C given as ascorbic acid the higher the dose is, the longer the odontoblasts (+ 8.79 microns for a dose of 1 compared to a dose of 0.5, + 9.37 microns for a dose of 2 compared to a dose of 1 and + 18.16 microns for a dose of 2 compared to a dose of 0.5).  
+
+**3. Stem cell length is compared for the same dose but different supplements**  
+
+* line 3: **0.5** VC vs **0.5** OJ: diff: -5.25 **p-value = 0.0242521**
+* line 8: **1.0** VC vs **1.0** OJ: diff: -5.93 **p-value = 0.0073930**
+* line 12 : **2.0** VC vs **2.0** OJ : diff : 0.08 **p-value = 1.0000000**  
+
+We see that the p-values for the first 2 combinations (0.5 VC vs 0.5 OJ and 1 VC vs 1 OJ) are significant (respectively p-value = 0.0242521 and 0.0073930). Indeed, we see that for the 0.5 and 1 doses, the length of odontoblasts is greater for the OJ supplement than the VC supplement (with +5.25 microns for 0.5 OJ compared to 0.5 VC and +5.93 microns for 1 OJ compared to 1 VC). For the third combination (2 VC vs. 2 OJ), there was no significant difference between the effect of the two supplements on stem cell length (p-value = 1.0000000) - meaning that at a dose of 2 milligrams per day of supplement, there was no significant difference between the response in terms of odontoblast length between the two types of supplements (on the OJ and VC).  
+
+### Conclusion    
+
+In general, we observed that **both supplements had a significant effect on the length of odontoblasts**. Indeed, we could observe for both types of supplements (OJ and VC) that **the higher the dose the longer the stem cells** (with an exception for a dose of 2.0 milligrams/day OJ vs 1.0 milligrams/day OJ).  
+We can also conclude that the **administration of vitamin using the OJ supplement was in general more efficient than the administration using the VC supplement** (with an exception for the 2.0 milligrams dose where no difference in the length of the odonoblasts was observed between the OJ and VC supplements).  
+
+
+  
+# References  
+
+
